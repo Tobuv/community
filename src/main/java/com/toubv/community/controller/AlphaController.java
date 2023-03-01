@@ -1,6 +1,7 @@
 package com.toubv.community.controller;
 
 import com.sun.javafx.logging.JFRPulseEvent;
+import com.toubv.community.entity.Result;
 import com.toubv.community.util.CommunityUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -83,5 +84,13 @@ public class AlphaController {
         System.out.println(session.getAttribute("age"));
 
         return "get session";
+    }
+
+    @PostMapping("/ajax")
+    @ResponseBody
+    public Result testAjax(String name, int age){
+        System.out.println(name);
+        System.out.println(age);
+        return Result.success("success");
     }
 }

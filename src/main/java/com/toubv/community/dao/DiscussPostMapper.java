@@ -25,4 +25,21 @@ public interface DiscussPostMapper {
      */
     int selectDiscussPostRows(@Param("userId") int userId);
 
+    /**
+     * 插入一条帖子
+     * @param
+     * @param
+     * @return
+     */
+    int insertDiscussPost(DiscussPost post);
+
+    /**
+     * 查询帖子详情
+     * @param id
+     * @return
+     */
+    DiscussPost selectDiscussPostById(int id);
+
+    int updatePostCommentCount(int id, int count);
+
 }
