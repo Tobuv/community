@@ -39,6 +39,33 @@ public class DiscussPostController implements TopicConstant {
     @Autowired
     private EventProducer eventProducer;
 
+    @RequestMapping(value = "/add",method = RequestMethod.POST)
+    @ResponseBody
+    public String addDiscussPost(String title,String content){
+        User user = hostHolder.get();
+        if(user==null){
+            return CommunityUtil.getJSONString(403,"你还没有登录！");
+        }
+        DiscussPost post = new DiscussPost();
+        post.setUserId(user.getId());
+        post.setTitle(title);
+        post.setContent(content);
+        post.setCreateTime(new Date());
+        int i = discussPostService.addDiscussPost(post);
+        //System.out.println(i);
+
+        //触发发帖事件
+        Event event = new Event()
+                .setTopic(TOPIC_PUBLISH)
+                .setUserId(user.getId())
+                .setEntityType(CommentConstant.COMMENT_TYPE_POST)
+                .setEntityId(post.getId());
+        eventProducer.fireEvent(event);
+
+
+        // 报错将来统一处理
+        return CommunityUtil.getJSONString(0,"发布成功");
+    }
 
     @GetMapping("/detail/{id}")
     public String getDiscussPost(Model model, @PathVariable("id") int id, Page page){
