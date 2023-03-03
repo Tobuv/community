@@ -10,7 +10,9 @@ import com.toubv.community.event.EventProducer;
 import com.toubv.community.service.CommentService;
 import com.toubv.community.service.DiscussPostService;
 import com.toubv.community.util.HostHolder;
+import com.toubv.community.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +35,9 @@ public class CommentController implements TopicConstant{
 
     @Autowired
     private DiscussPostService discussPostService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @PostMapping("/add/{discussPostId}")
     public String addComment(@PathVariable("discussPostId") int discussPostId, Comment comment){
@@ -69,6 +74,9 @@ public class CommentController implements TopicConstant{
                     .setEntityId(discussPostId);
             eventProducer.fireEvent(event);
 
+            //计算帖子分数
+            String redisKey = RedisUtil.getPostScoreKey();
+            redisTemplate.opsForSet().add(redisKey,discussPostId);
         }
         return "redirect:/discuss/detail/" + discussPostId;
     }

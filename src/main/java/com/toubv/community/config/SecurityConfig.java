@@ -43,6 +43,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter implements Auth
 
                 )
                 .hasAnyAuthority(AUTHORITY_USER, AUTHORITY_ADMIN, AUTHORITY_MODERATOR)
+                .antMatchers(
+                        "/discuss/top",
+                        "/discuss/wonderful"
+                )
+                .hasAnyAuthority(
+                        AUTHORITY_MODERATOR
+                )
+                .antMatchers(
+                        "/discuss/delete",
+                        "/data/**"
+                )
+                .hasAnyAuthority(AUTHORITY_ADMIN)
                 .anyRequest().permitAll()
                 .and().csrf().disable();
         //权限不够的处理
@@ -51,7 +63,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter implements Auth
                     //未登录处理
                     @Override
                     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-                        String xRequestWith = request.getHeader("x-request-with");
+                        String xRequestWith = request.getHeader("x-requested-with");
                         if("XMLHttpRequest".equals(xRequestWith)){
                             response.setContentType("application/plain;charset=utf-8");
                             PrintWriter writer = response.getWriter();
@@ -65,7 +77,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter implements Auth
                     //权限不足处理
                     @Override
                     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
-                        String xRequestWith = request.getHeader("x-request-with");
+                        String xRequestWith = request.getHeader("x-requested-with");
                         if("XMLHttpRequest".equals(xRequestWith)){
                             response.setContentType("application/plain;charset=utf-8");
                             PrintWriter writer = response.getWriter();

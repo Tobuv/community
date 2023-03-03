@@ -1,7 +1,7 @@
 package com.toubv.community.config;
 
+import com.toubv.community.controller.interceptor.DataInterceptor;
 import com.toubv.community.controller.interceptor.AlphaInterceptor;
-import com.toubv.community.controller.interceptor.LoginRequiredInterceptor;
 import com.toubv.community.controller.interceptor.LoginTicketInterceptor;
 import com.toubv.community.controller.interceptor.MessageInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +17,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private LoginTicketInterceptor loginTicketInterceptor;
+
+    @Autowired
+    private DataInterceptor dataInterceptor;
 
 //    @Autowired
 //    private LoginRequiredInterceptor loginRequiredInterceptor;
@@ -37,6 +40,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 //                .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.jpeg");
 
         registry.addInterceptor(messageInterceptor)
+                .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.jpeg");
+
+        registry.addInterceptor(dataInterceptor)
                 .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.jpeg");
     }
 }

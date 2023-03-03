@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,12 +31,12 @@ public class HomeController {
     private LikeService likeService;
 
     @GetMapping("/index")
-    public String getIndexPage(Model model, Page page){
+    public String getIndexPage(Model model, Page page, @RequestParam(name = "orderMode", defaultValue = "0") int orderMode){
         int offset = page.getOffset();
         int limit = page.getLimit();
         page.setRows(discussPostService.findDiscussPostRows(0));
-        page.setPath("/index");
-        List<DiscussPost> posts = discussPostService.findDiscussPosts(0, offset, limit);
+        page.setPath("/index?orderMode=" + orderMode);
+        List<DiscussPost> posts = discussPostService.findDiscussPosts(0, offset, limit, orderMode);
         List<Map<String, Object>> discussPosts = new ArrayList<>();
         if(posts != null){
             for(DiscussPost post : posts){
@@ -52,6 +53,10 @@ public class HomeController {
             }
         }
         model.addAttribute("discussPosts", discussPosts);
+        model.addAttribute("orderMode", orderMode);
+
+
+
         return "/index";
     }
 
