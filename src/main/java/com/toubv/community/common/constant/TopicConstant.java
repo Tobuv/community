@@ -12,5 +12,7 @@ public interface TopicConstant {
 
     String TOPIC_DELETE = "delete";
 
+    String TOPIC_SHARE = "share";
+
     int SYSTEM_USER = 1;
 }

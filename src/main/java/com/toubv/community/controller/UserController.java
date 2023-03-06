@@ -1,6 +1,13 @@
 package com.toubv.community.controller;
 
 
+import com.alibaba.fastjson2.JSONObject;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.common.utils.BinaryUtil;
+import com.aliyun.oss.model.MatchMode;
+import com.aliyun.oss.model.PolicyConditions;
+import com.sun.javafx.binding.StringFormatter;
 import com.toubv.community.common.annotation.LoginRequired;
 import com.toubv.community.common.constant.CommentConstant;
 import com.toubv.community.entity.User;
@@ -18,21 +25,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import javax.mail.Multipart;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.time.LocalDate;
+import java.util.Date;
 
 @Controller
 @RequestMapping("/user")
 public class UserController {
+
 
     public static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -57,10 +65,111 @@ public class UserController {
     @Autowired
     private FollowService followService;
 
+    @Value("${alibaba.cloud.access-key}")
+    private String accessId;
+    @Value("${alibaba.cloud.secret-key}")
+    private String accessKey ;
+    @Value("${alibaba.cloud.oss.bucketName}")
+    private String bucketName ;
+    @Value("${alibaba.cloud.oss.endpoint}")
+    private String endpoint;
+
     @LoginRequired
     @GetMapping("/setting")
-    public String getSettingPage(){
+    public String getSettingPage(Model model) {
+
+        String key = CommunityUtil.generateUUID();
+        // host的格式为 bucketname.endpoint
+        String host = StringFormatter.concat("https://", bucketName, ".", endpoint).getValue();
+        // callbackUrl为 上传回调服务器的URL，请将下面的IP和Port配置为您自己的真实信息。
+        // String callbackUrl = "http://88.88.88.88:8888";
+        // 每一天产生一个文件夹
+        String dir = LocalDate.now().toString() + "/"; // 用户上传文件时指定的前缀,如果是 / 则自动检测为文件夹。
+
+        JSONObject jsonObject = new JSONObject();
+
+        long expireTime = 100;
+        long expireEndTime = System.currentTimeMillis() + expireTime * 1000; //过期时间 100 秒
+        Date expiration = new Date(expireEndTime);
+        // PostObject请求最大可支持的文件大小为5 GB，即CONTENT_LENGTH_RANGE为5*1024*1024*1024。
+        PolicyConditions policyConds = new PolicyConditions();
+        policyConds.addConditionItem(PolicyConditions.COND_CONTENT_LENGTH_RANGE, 0, 1048576000);
+        policyConds.addConditionItem(MatchMode.StartWith, PolicyConditions.COND_KEY, dir);
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessId, accessKey);
+        String postPolicy = ossClient.generatePostPolicy(expiration, policyConds);
+        byte[] binaryData = new byte[0];
+        try {
+            binaryData = postPolicy.getBytes("utf-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        String encodedPolicy = BinaryUtil.toBase64String(binaryData);
+        String postSignature = ossClient.calculatePostSignature(postPolicy);
+
+        model.addAttribute("OSSAccessKeyId", accessId);
+        model.addAttribute("policy", encodedPolicy);
+        model.addAttribute("signature", postSignature);
+        model.addAttribute("dir", dir);
+        model.addAttribute("key", dir + key);
+        model.addAttribute("host", host);
+        model.addAttribute("expire", String.valueOf(expireEndTime / 1000));
+
         return "/site/setting";
+    }
+
+    @PostMapping("/header/url")
+    @ResponseBody
+    public String updateHeaderUrl(String filename){
+        if(StringUtils.isBlank(filename)){
+            return CommunityUtil.getJSONString(1, "文件名不能为空！");
+        }
+        String host = StringFormatter.concat("https://", bucketName, ".", endpoint).getValue();
+        String url = host + "/" + filename;
+        userService.updateHeader(hostHolder.get().getId(), url);
+        return CommunityUtil.getJSONString(0);
+    }
+
+    @GetMapping("/getPolicy")
+    @ResponseBody
+    public JSONObject getPolicy() {
+
+        // host的格式为 bucketname.endpoint
+        String host = StringFormatter.concat("https://", bucketName, ".", endpoint).getValue();
+        // callbackUrl为 上传回调服务器的URL，请将下面的IP和Port配置为您自己的真实信息。
+        // String callbackUrl = "http://88.88.88.88:8888";
+        // 每一天产生一个文件夹
+        String dir = LocalDate.now().toString() + "/"; // 用户上传文件时指定的前缀,如果是 / 则自动检测为文件夹。
+
+        JSONObject jsonObject = new JSONObject();
+
+        long expireTime = 100;
+        long expireEndTime = System.currentTimeMillis() + expireTime * 1000; //过期时间 100 秒
+        Date expiration = new Date(expireEndTime);
+        // PostObject请求最大可支持的文件大小为5 GB，即CONTENT_LENGTH_RANGE为5*1024*1024*1024。
+        PolicyConditions policyConds = new PolicyConditions();
+        policyConds.addConditionItem(PolicyConditions.COND_CONTENT_LENGTH_RANGE, 0, 1048576000);
+        policyConds.addConditionItem(MatchMode.StartWith, PolicyConditions.COND_KEY, dir);
+        policyConds.addConditionItem(PolicyConditions.COND_CONTENT_LENGTH_RANGE, 1, 1073741824);
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessId, accessKey);
+        String postPolicy = ossClient.generatePostPolicy(expiration, policyConds);
+        byte[] binaryData = new byte[0];
+        try {
+            binaryData = postPolicy.getBytes("utf-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        String encodedPolicy = BinaryUtil.toBase64String(binaryData);
+        String postSignature = ossClient.calculatePostSignature(postPolicy);
+
+        jsonObject.put("OSSAccessKeyId", accessId);
+        jsonObject.put("policy", encodedPolicy);
+        jsonObject.put("signature", postSignature);
+        jsonObject.put("dir", dir);
+        jsonObject.put("host", host);
+        jsonObject.put("expire", String.valueOf(expireEndTime / 1000));
+
+
+        return jsonObject;
     }
 
     @LoginRequired
